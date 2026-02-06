@@ -24,6 +24,11 @@ case $OUTCOME in
   cancelled)
     header=$'**The workflow was cancelled while compiling.**  \n'
     header+=$'This may happen, for instance, if the workflow runs for more than 360 minutes.\n'
+    if [[ -e "$bookml_report" ]] ; then
+      # the job was likely cancelled before reporting its outputs and targets, try recovering them from the log
+      [[ -n $TARGETS ]] || TARGETS="$(grep '^ Targets: ' < "$bookml_report" | head -n 1 | sed -E -e 's/^.*:\s*|(\s| )*$//g' || :)"
+      [[ -n $OUTPUTS ]] || OUTPUTS="${TARGETS:+$(ls -C --width=0 $TARGETS 2>/dev/null || :)}"
+    fi
     outcome=cancelled ;;
   *)
     header=$'**An error has occurred.**\n'
@@ -90,7 +95,10 @@ if [[ -e "$bookml_report" ]] ; then
                 -e 's!^(<samp><b>(Conversion|Postprocessing) complete.*)$!|💬|\1|!p' \
                 -e 's!^(<samp><b>(Conversion|Postprocessing) failed.*)$!|💥|\1|!p' \
               < "$bookml_report" || :)"
-  [[ -z $messages ]] || messagesHeader=$'\n---\n\n||Warnings and errors|\n|-|-|\n'
+  if [[ -n $messages ]] ; then
+    messagesHeader=$'\n---\n\n||Warnings and errors|\n|-|-|\n'
+    summaryHeader=$'\n---\n\nTo open a file to correct line triggering a warning or error, please open the links below in a new tab or window.\n\n||Warnings and errors|\n|-|-|\n'
+  fi
 fi
 
 if [[ $RELEASE == true ]] ; then
@@ -136,16 +144,16 @@ if [[ $RELEASE == true ]] ; then
     escapedRelease="${escapedRelease//</'&lt;'}"
     escapedRelease="${escapedRelease//>/'&gt;'}"
     echo "$header"$'\n**Release failed with message:**\n\n'"<pre><samp>$escapedRelease</samp></pre>"$'\n\n'"${AUX_URL:+${OUTPUTS:+All outputs can still be downloaded from the [aux directory]($AUX_URL). }}Further details can be found in the ${AUX_URL:+logs in the [aux directory]($AUX_URL) and the }[output messages]($output_messages)." >> "$GITHUB_STEP_SUMMARY"
-    [[ -z $messages ]] || echo -n "$messagesHeader$messages" >> "$GITHUB_STEP_SUMMARY"
+    [[ -z $messages ]] || echo -n "$summaryHeader$messages" >> "$GITHUB_STEP_SUMMARY"
     exit "$ret"
   else
     echo "$release"
     echo "release-url=$release" >> "$GITHUB_OUTPUT"
     echo "$header"$'\n'"[Release page]($release)."$'\n\n'"${AUX_URL:+${OUTPUTS:+All outputs can also be downloaded from the [aux directory]($AUX_URL). }}Further details can be found in the ${AUX_URL:+logs in the [aux directory]($AUX_URL) and the }[output messages]($output_messages)." >> "$GITHUB_STEP_SUMMARY"
     [[ -z $downloads ]] || echo -n $'\n### Downloads\n'"$downloads" >> "$GITHUB_STEP_SUMMARY"
-    [[ -z $messages ]] || echo -n "$messagesHeader$messages" >> "$GITHUB_STEP_SUMMARY"
+    [[ -z $messages ]] || echo -n "$summaryHeader$messages" >> "$GITHUB_STEP_SUMMARY"
   fi
 else
   echo "$header"$'\n'"${AUX_URL:+${OUTPUTS:+All outputs can be downloaded from the [aux directory]($AUX_URL). }}Further details can be found in the ${AUX_URL:+logs in the [aux directory]($AUX_URL) and the }[output messages]($output_messages)." >> "$GITHUB_STEP_SUMMARY"
-  [[ -z $messages ]] || echo -n "$messagesHeader$messages" >> "$GITHUB_STEP_SUMMARY"
+  [[ -z $messages ]] || echo -n "$summaryHeader$messages" >> "$GITHUB_STEP_SUMMARY"
 fi

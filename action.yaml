@@ -1,4 +1,4 @@
-name: Compile with BookML
+name: Compile with BookML fork
 author: Vincenzo Mantova
 description: Compile LaTeX files to HTML via BookML
 branding:

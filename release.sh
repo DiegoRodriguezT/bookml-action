@@ -108,9 +108,29 @@ if [[ $RELEASE == true ]] ; then
   tag="bookml-$GITHUB_RUN_NUMBER-$GITHUB_RUN_ATTEMPT"
   downUrl="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/$tag"
 
-  # Add links to each output in Downloads section
+  # Add links to each output in Downloads section (ensure unique asset names)
+  asset_dir="$RUNNER_TEMP/bookml-release-assets"
+  mkdir -p "$asset_dir"
+  release_assets=()
   for output in $OUTPUTS ; do
-    downloads+="- [$output]($downUrl/$output)"$'\n'
+    base="${output##*/}"
+    dir="${output%/*}"
+    if [[ "$dir" == "$output" || -z "$dir" ]] ; then
+      asset_name="$base"
+      display_name="$base"
+    else
+      safe_dir="${dir//\//_}"
+      asset_name="${safe_dir}-${base}"
+      display_name="$output"
+    fi
+    asset_path="$asset_dir/$asset_name"
+    if [[ -e "$output" ]] ; then
+      cp -- "$output" "$asset_path"
+      release_assets+=("$asset_path")
+      downloads+="- [$display_name]($downUrl/$asset_name)"$'\n'
+    else
+      echo "::error title=Release asset missing::Could not find output file '$output' to attach to the release."
+    fi
   done
 
   # Release notes
@@ -135,7 +155,7 @@ if [[ $RELEASE == true ]] ; then
     fi
   fi
 
-  release="$(gh release create "$tag" --target="$GITHUB_REF_NAME" --repo="$GITHUB_REPOSITORY" --title="$title" --notes="$notes" $OUTPUTS 2>&1)"
+  release="$(gh release create "$tag" --target="$GITHUB_REF_NAME" --repo="$GITHUB_REPOSITORY" --title="$title" --notes="$notes" ${release_assets[*]} 2>&1)"
   ret="$?"
 
   if [[ $ret != 0 ]] ; then

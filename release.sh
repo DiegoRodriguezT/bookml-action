@@ -41,7 +41,7 @@ if [[ ! -e "$bookml_report" ]] ; then
   header+=$'**BookML did not run.**\n'
 elif [[ -z $TARGETS ]] ; then
   header+=$'**BookML did not try to compile any file.**  \n'
-  header+=$'Please check that .tex files containing `\documentclass` exist in the top folder and that their filenames have no spaces.\n'
+  header+=$'Please check that .tex files containing `\documentclass` exist in the repository and that their filenames have no spaces.\n'
 else
   read -r -a outputs <<< "$OUTPUTS"
   read -r -a targets <<< "$TARGETS"

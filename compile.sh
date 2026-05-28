@@ -42,13 +42,26 @@ docker run --rm --interactive=true --volume="$GITHUB_WORKSPACE":/source \
   --volume="$RUNNER_TEMP/auxdir":/auxdir --volume="$GITHUB_OUTPUT":/github-output\
   --env=REPLACE_BOOKML="$REPLACE_BOOKML" --env=TIMEOUT_MINUTES="$TIMEOUT_MINUTES" \
   --entrypoint /bin/bash "$IMAGE" -s <<'EOF'
+cd /source
+
 if [[ $REPLACE_BOOKML == true ]] ; then
   /run-bookml update || echo '::error title=Could not replace the bookml/ folder::Could not replace the bookml/ folder.'
 fi
 
 export max_print_line=10000
 
-timeout "$TIMEOUT_MINUTES"m /run-bookml -k all AUX_DIR=/auxdir 2>&1 | tee /auxdir/bookml-report.log
+sources=()
+while IFS= read -r tex_file ; do
+  tex_file="${tex_file#./}"
+  sources+=("$tex_file")
+done < <(grep -rl --include='*.tex' --exclude-dir=.git --exclude-dir=bookml '\\documentclass' . || :)
+
+sources_arg=()
+if [[ ${#sources[@]} -gt 0 ]] ; then
+  sources_arg=(SOURCES="${sources[*]}")
+fi
+
+timeout "$TIMEOUT_MINUTES"m /run-bookml -k all "${sources_arg[@]}" AUX_DIR=/auxdir 2>&1 | tee /auxdir/bookml-report.log
 
 case "${PIPESTATUS[0]}" in
   124|137) outcome=timeout

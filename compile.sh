@@ -50,15 +50,25 @@ fi
 
 export max_print_line=10000
 
+escape_make_path() {
+  local path="$1"
+  path="${path//\\/\\\\}"
+  path="${path//\#/\\#}"
+  path="${path// /\\ }"
+  printf '%s' "$path"
+}
+
 sources=()
+sources_escaped=()
 while IFS= read -r tex_file ; do
   tex_file="${tex_file#./}"
   sources+=("$tex_file")
+  sources_escaped+=("$(escape_make_path "$tex_file")")
 done < <(grep -rl --include='*.tex' --exclude-dir=.git --exclude-dir=bookml '\\documentclass' . || :)
 
 sources_arg=()
-if [[ ${#sources[@]} -gt 0 ]] ; then
-  sources_arg=(SOURCES="${sources[*]}")
+if [[ ${#sources_escaped[@]} -gt 0 ]] ; then
+  sources_arg=(SOURCES="${sources_escaped[*]}")
 fi
 
 timeout "$TIMEOUT_MINUTES"m /run-bookml -k all "${sources_arg[@]}" AUX_DIR=/auxdir 2>&1 | tee /auxdir/bookml-report.log

@@ -50,38 +50,75 @@ fi
 
 export max_print_line=10000
 
-escape_make_path() {
-  local path="$1"
-  path="${path//\\/\\\\}"
-  path="${path//\#/\\#}"
-  path="${path// /\\ }"
-  printf '%s' "$path"
-}
+combined_log=/auxdir/bookml-report.log
+: > "$combined_log"
 
-sources=()
-sources_escaped=()
-while IFS= read -r tex_file ; do
-  tex_file="${tex_file#./}"
-  sources+=("$tex_file")
-  sources_escaped+=("$(escape_make_path "$tex_file")")
-done < <(grep -rl --include='*.tex' --exclude-dir=.git --exclude-dir=bookml '\\documentclass' . || :)
+mapfile -t tex_files < <(grep -rl --include='*.tex' --exclude-dir=.git --exclude-dir=bookml '\\documentclass' . || :)
 
-sources_arg=()
-if [[ ${#sources_escaped[@]} -gt 0 ]] ; then
-  sources_arg=(SOURCES="${sources_escaped[*]}")
+if [[ ${#tex_files[@]} -eq 0 ]] ; then
+  outcome=success
+  targets=
+  outputs=
+else
+  declare -A seen_dirs
+  dirs=()
+  for tex_file in "${tex_files[@]}" ; do
+    tex_file="${tex_file#./}"
+    dir="${tex_file%/*}"
+    if [[ $dir == "$tex_file" ]] ; then
+      dir="."
+    fi
+    dir="${dir#./}"
+    if [[ -z ${seen_dirs[$dir]} ]] ; then
+      seen_dirs[$dir]=1
+      dirs+=("$dir")
+    fi
+  done
+
+  outcome=success
+  targets_list=()
+  outputs_list=()
+  dir_index=0
+
+  for dir in "${dirs[@]}" ; do
+    dir_index=$((dir_index + 1))
+    aux_dir="/auxdir/run-$dir_index"
+    mkdir -p "$aux_dir"
+    run_log="$aux_dir/bookml-report.log"
+
+    echo "=== Directory: ${dir:-.} ===" >> "$combined_log"
+    pushd "/source/${dir:-.}" >/dev/null
+    timeout "$TIMEOUT_MINUTES"m /run-bookml -k all AUX_DIR="$aux_dir" 2>&1 | tee -a "$run_log" >> "$combined_log"
+    run_ret="${PIPESTATUS[0]}"
+    popd >/dev/null
+
+    case "$run_ret" in
+      124|137) outcome=timeout
+        echo "::error title=Compiling timed out::Increase \`timeout-minutes\` to allow more time." ;;
+      0) : ;;
+      *) [[ $outcome != timeout ]] && outcome=failure ;;
+    esac
+
+    run_targets="$(grep '^ Targets: ' < "$run_log" | head -n 1 | sed -E -e 's/^.*:\s*|(\s| )*$//g')"
+    if [[ -n $run_targets ]] ; then
+      read -r -a run_targets_arr <<< "$run_targets"
+      for target in "${run_targets_arr[@]}" ; do
+        if [[ -n $dir && $dir != "." ]] ; then
+          prefixed="$dir/$target"
+        else
+          prefixed="$target"
+        fi
+        targets_list+=("$prefixed")
+        if [[ -e "/source/$prefixed" ]] ; then
+          outputs_list+=("$prefixed")
+        fi
+      done
+    fi
+  done
+
+  targets="${targets_list[*]}"
+  outputs="${outputs_list[*]}"
 fi
-
-timeout "$TIMEOUT_MINUTES"m /run-bookml -k all "${sources_arg[@]}" AUX_DIR=/auxdir 2>&1 | tee /auxdir/bookml-report.log
-
-case "${PIPESTATUS[0]}" in
-  124|137) outcome=timeout
-    echo "::error title=Compiling timed out::Increase \`timeout-minutes\` to allow more time." ;;
-  0) outcome=success ;;
-  *) outcome=failure ;;
-esac
-
-targets="$(grep '^ Targets: ' < /auxdir/bookml-report.log | head -n 1 | sed -E -e 's/^.*:\s*|(\s| )*$//g')"
-outputs="${targets:+$(ls -C --width=0 $targets 2>/dev/null || :)}"
 
 echo "outcome=$outcome" >> /github-output
 echo "targets=$targets" >> /github-output

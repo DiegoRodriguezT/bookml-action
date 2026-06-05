@@ -59,9 +59,9 @@ runs:
       uses: actions/checkout@v6
 
     # GitHub does not allow dynamic inputs in 'uses', so we need to pull the Docker image by hand
-    - name: Compile with BookML
-      id: bookml
-      shell: sh
+     - name: Compile with BookML
+       id: bookml
+       shell: sh
        env:
          SCHEME: ${{ inputs.scheme }}
          VERSION: ${{ inputs.version }}
@@ -69,9 +69,9 @@ runs:
          TIMEOUT_MINUTES: ${{ inputs.timeout-minutes }}
          FORMATS: ${{ inputs.formats }}
          FOLDERS: ${{ inputs.folders }}
-      run: |
-        ### Compile with BookML ###
-        "$GITHUB_ACTION_PATH"/compile.sh
+       run: |
+         ### Compile with BookML ###
+         "$GITHUB_ACTION_PATH"/compile.sh
 
     - name: Upload aux directory (all products, including logs)
       uses: actions/upload-artifact@v7

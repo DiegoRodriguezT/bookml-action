@@ -58,7 +58,7 @@ runs:
       if: ${{ inputs.checkout == 'true' }}
       uses: actions/checkout@v6
 
-    # GitHub does not allow dynamic inputs in 'uses', so we need to pull the Docker image by hand
+     # GitHub does not allow dynamic inputs in 'uses', so we need to pull the Docker image by hand
      - name: Compile with BookML
        id: bookml
        shell: sh

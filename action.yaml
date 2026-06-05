@@ -27,6 +27,12 @@ inputs:
   timeout-minutes:
     description: The maximum number of minutes to run BookML before cancelling the build
     default: 6
+  formats:
+    description: Space-separated list of output formats (any of 'zip', 'scorm', 'pdf')
+    default: scorm zip
+  folders:
+    description: Space-separated list of folders to compile (if empty, compiles all folders containing .tex files with \documentclass)
+    default: ''
 
 outputs:
   outputs:
@@ -56,11 +62,13 @@ runs:
     - name: Compile with BookML
       id: bookml
       shell: sh
-      env:
-        SCHEME: ${{ inputs.scheme }}
-        VERSION: ${{ inputs.version }}
-        REPLACE_BOOKML: ${{ inputs.replace-bookml }}
-        TIMEOUT_MINUTES: ${{ inputs.timeout-minutes }}
+       env:
+         SCHEME: ${{ inputs.scheme }}
+         VERSION: ${{ inputs.version }}
+         REPLACE_BOOKML: ${{ inputs.replace-bookml }}
+         TIMEOUT_MINUTES: ${{ inputs.timeout-minutes }}
+         FORMATS: ${{ inputs.formats }}
+         FOLDERS: ${{ inputs.folders }}
       run: |
         ### Compile with BookML ###
         "$GITHUB_ACTION_PATH"/compile.sh

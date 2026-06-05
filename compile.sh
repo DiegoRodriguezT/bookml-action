@@ -75,6 +75,22 @@ else
     fi
   done
 
+  if [[ -n $FOLDERS ]] ; then
+    declare -a filter_folders
+    read -r -a filter_folders <<< "$FOLDERS"
+    declare -A filter_map
+    for f in "${filter_folders[@]}" ; do
+      filter_map[$f]=1
+    done
+    declare -a filtered_dirs
+    for d in "${dirs[@]}" ; do
+      if [[ -n ${filter_map[$d]} ]] ; then
+        filtered_dirs+=("$d")
+      fi
+    done
+    dirs=("${filtered_dirs[@]}")
+  fi
+
   outcome=success
   targets_list=()
   outputs_list=()
@@ -88,7 +104,7 @@ else
 
     echo "=== Directory: ${dir:-.} ===" >> "$combined_log"
     pushd "/source/${dir:-.}" >/dev/null
-    timeout "$TIMEOUT_MINUTES"m /run-bookml -k all AUX_DIR="$aux_dir" 2>&1 | tee -a "$run_log" >> "$combined_log"
+    timeout "$TIMEOUT_MINUTES"m /run-bookml -k all ${FORMATS:+FORMATS="$FORMATS"} AUX_DIR="$aux_dir" 2>&1 | tee -a "$run_log" >> "$combined_log"
     run_ret="${PIPESTATUS[0]}"
     popd >/dev/null
 

@@ -52,6 +52,8 @@ On every push, the action will checkout the repository, compile all .tex files c
 <dt>version</dt><dd>Select which version of BookML to use. Note that this only affects which Docker image is used; if the <code>bookml/</code> folder is already present in the repository, that version of BookML will be used. Default: <code>'latest'</code> (string).</dd>
 <dt>replace-bookml</dt><dd>Whether to replace the <code>bookml/</code> folder with the one included in the Docker image. Default: <code>false</code> (boolean).</dd>
 <dt>timeout-minutes</dt><dd>The maximum number of minutes to run BookML before cancelling the build. Default: <code>6</code> (positive integer).</dd>
+<dt>formats</dt><dd>Space-separated list of output formats to generate. Choose from <code>zip</code>, <code>scorm</code>, <code>pdf</code>. Default: <code>'scorm zip'</code> (string).</dd>
+<dt>folders</dt><dd>Space-separated list of folders to compile (e.g., <code>'Logica Calculo'</code>). If empty, compiles all folders containing <code>.tex</code> files with <code>\documentclass</code>. Default: <code>''</code> (empty, compiles all) (string).</dd>
 </dl>
 
 For example, the following will use the BookML v0.19.3 Docker image, replace the `bookml/` folder with version v0.19.3, use the TeX Live scheme small, and set a longer timeout.

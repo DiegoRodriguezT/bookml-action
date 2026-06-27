@@ -105,7 +105,7 @@ else
 
     echo "=== Directory: ${dir:-.} ===" >> "$combined_log"
     pushd "/source/${dir:-.}" >/dev/null
-    timeout "$TIMEOUT_MINUTES"m /run-bookml -k all ${FORMATS:+FORMATS="$FORMATS"} AUX_DIR="$aux_dir" 2>&1 | tee -a "$run_log" >> "$combined_log"
+    timeout "$TIMEOUT_MINUTES"m /run-bookml -k all LATEXMLFLAGS="--language=es" ${FORMATS:+FORMATS="$FORMATS"} AUX_DIR="$aux_dir" 2>&1 | tee -a "$run_log" >> "$combined_log"
     run_ret="${PIPESTATUS[0]}"
     popd >/dev/null
 

@@ -41,7 +41,8 @@ echo "::stop-commands::$restartToken"
 docker run --rm --interactive=true --volume="$GITHUB_WORKSPACE":/source \
   --volume="$RUNNER_TEMP/auxdir":/auxdir --volume="$GITHUB_OUTPUT":/github-output\
   --env=REPLACE_BOOKML="$REPLACE_BOOKML" --env=TIMEOUT_MINUTES="$TIMEOUT_MINUTES" \
-  --entrypoint /bin/bash "$IMAGE" -s <<'EOF'
+  --entrypoint /bin/bash "$IMAGE" -s <<'EOF' \
+  --env=FOLDERS="$FOLDERS" --env=FORMATS="$FORMATS"
 cd /source
 
 if [[ $REPLACE_BOOKML == true ]] ; then
